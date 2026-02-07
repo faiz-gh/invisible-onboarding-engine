@@ -1,8 +1,9 @@
 fastapi
 uvicorn
 pydantic
-google-genai
+ollama
 python-docx
 python-dotenv
 fpdf
 wheel
+streamlit

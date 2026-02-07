@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from .models.schemas import RawJobDescription, OnboardingPackage
+from .models.schemas import RawJobDescription, OnboardingPackage, PolicyQuestion
 from .services.ai_service import AIService
 from .services.pdf_service import PDFService
 from .services.compliance import ComplianceEngine
@@ -24,7 +24,7 @@ async def generate_onboarding_packet(input_data: RawJobDescription):
     
     # 3. Generate PDF (NEW)
     print("📄 Generating PDF...")
-    pdf_path = pdf_service.generate_contract(candidate, jurisdiction)
+    pdf_result = pdf_service.generate_contract(candidate, jurisdiction)
     
     # 4. Compliance Logic (Simple)
     print("⚖️ Running Compliance Checks...")
@@ -37,10 +37,20 @@ async def generate_onboarding_packet(input_data: RawJobDescription):
     # 5. Return Response
     return OnboardingPackage(
         candidate=candidate,
-        generated_files=[pdf_path],
+        generated_files=[pdf_result["path"]],
         compliance_alerts=alert_messages,
-        jurisdiction_detected=jurisdiction
+        jurisdiction_detected=jurisdiction,
+        original_template_text=pdf_result["original_text"], # Pass to frontend
+        final_contract_text=pdf_result["final_text"]        # Pass to frontend
     )
+
+@app.post("/ask-policy")
+async def ask_policy(query: PolicyQuestion):
+    """
+    Endpoint for the 'Ask HR' sidebar tab.
+    """
+    answer = ai_service.answer_policy_question(query.question)
+    return {"answer": answer}
 
 @app.get("/")
 async def root():

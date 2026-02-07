@@ -1,17 +1,15 @@
 import json
 import os
-from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+import re
+from datetime import date
+from ollama import Client
 from ..models.schemas import CandidateProfile
-
-# Load environment variables
-load_dotenv()
 
 # Mock data for fallback
 MOCK_RESPONSE = {
     "name": "Alex Smith",
     "role": "Senior DevOps Engineer",
+    "job_family": "Engineering",
     "email": "alex.smith@example.com",
     "salary": 25000,
     "currency": "AED",
@@ -21,83 +19,166 @@ MOCK_RESPONSE = {
     "equity_grant": True
 }
 
+def get_windows_host_ip():
+    """
+    Auto-detects the Windows Host IP from inside WSL.
+    """
+    try:
+        # Method 1: Check /etc/resolv.conf for the nameserver (usually the host)
+        with open("/etc/resolv.conf", "r") as f:
+            for line in f:
+                if "nameserver" in line:
+                    ip = line.split()[1]
+                    return ip
+    except Exception:
+        pass
+    
+    # Fallback: standard localhost (if not in WSL)
+    return "127.0.0.1"
+
 class AIService:
     def __init__(self):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
+        # 1. AUTO-DISCOVER THE HOST
+        self.windows_ip = get_windows_host_ip()
+        self.host_url = f"http://{self.windows_ip}:11434"
         
-        if not self.api_key:
-            print("⚠️ WARNING: GOOGLE_API_KEY not found. Running in MOCK MODE.")
+        print(f"🔍 Discovered Windows IP: {self.windows_ip}")
+        print(f"🦙 Connecting to Ollama at: {self.host_url}")
+        
+        self.model = "ministral-3" # Ensure you have pulled this model!
+        
+        # 2. Initialize Client
+        try:
+            self.client = Client(host=self.host_url)
+        except Exception as e:
+            print(f"⚠️ Failed to initialize Client: {e}")
             self.client = None
-        else:
-            # Initialize the new Client
-            self.client = genai.Client(api_key=self.api_key)
 
     def extract_candidate_data(self, raw_text: str) -> CandidateProfile:
+        today_str = date.today().strftime("%Y-%m-%d")
+
+        prompt = f"""
+        Current Date: {today_str} (Use this to resolve relative dates like "next month")
+        
+        You are an expert HR Data Extractor. Your goal is to extract structured data from the text below.
+        
+        CRITICAL INSTRUCTION - "job_family":
+        Analyze the "role" and classify it into EXACTLY ONE of these categories:
+        - "Sales" (if role involves Sales, BD, Account Exec)
+        - "Engineering" (if role involves Dev, QA, Product, Data)
+        - "Executive" (if role is C-level, VP, Director)
+        - "General" (everything else)
+
+        CRITICAL INSTRUCTION - "citizenship" & "location_country":
+        Return the COUNTRY NAME ONLY. 
+        - Example: "UAE" (not "UAE citizen")
+        - Example: "Germany" (not "German")
+
+        Required JSON Structure:
+        {{
+            "name": string (use "Unknown" if missing),
+            "role": string (use "TBD" if missing),
+            "job_family": string,
+            "email": string or null,
+            "salary": number (0 if missing),
+            "currency": string (default "USD"),
+            "start_date": string (YYYY-MM-DD) or null,
+            "location_country": string (default "Unknown"),
+            "citizenship": string or null,
+            "equity_grant": boolean
+        }}
+
+        Text to analyze: "{raw_text}"
+        
+        Return ONLY the JSON object. Do not include any explanation or markdown formatting like ```json.
         """
-        Extracts structured data from unstructured text using Gemini.
-        """
-        if not self.client:
-            return CandidateProfile(**MOCK_RESPONSE)
 
         try:
-            # The prompt remains similar, but we can be more direct
-            prompt = f"""
-            Extract the following details from the text below into a JSON object.
-            
-            Required Keys:
-            - name (string, use "Unknown" if missing)
-            - role (string, use "TBD" if missing)
-            - email (string, or null if missing)
-            - salary (number, or 0 if missing)
-            - currency (string, default "USD")
-            - start_date (string YYYY-MM-DD, or null if missing)
-            - location_country (string, default "Unknown")
-            
-            - citizenship (string, COUNTRY NAME ONLY. e.g., return "UAE" not "UAE citizen", return "Germany" not "German")
-            
-            - equity_grant (boolean)
-
-            Text to analyze: "{raw_text}"
-            """
-
-            # New SDK Call Structure
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash-lite",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"  # Native JSON support!
-                )
+            # 3. USE CLIENT CHAT
+            response = self.client.chat(
+                model=self.model,
+                messages=[
+                    {'role': 'system', 'content': 'You are a JSON extractor.'},
+                    {'role': 'user', 'content': prompt}
+                ],
             )
             
-            # The new SDK guarantees JSON string output with this config
-            data = json.loads(response.text)
+            # Clean Output
+            content = response.message.content.strip()
+            # Remove markdown blocks if present
+            content = re.sub(r'^```json\s*', '', content)
+            content = re.sub(r'^```\s*', '', content)
+            content = re.sub(r'\s*```$', '', content)
             
+            data = json.loads(content)
             return CandidateProfile(**data)
 
         except Exception as e:
-            print(f"Gemini Extraction Failed: {e}")
+            print(f"❌ Ollama Extraction Failed: {e}")
+            print(f"   Target Host was: {self.host_url}")
             return CandidateProfile(**MOCK_RESPONSE)
 
     def determine_jurisdiction(self, country: str) -> str:
         """
-        Determines the legal framework based on location.
+        Robust Jurisdiction Matcher.
+        Handles full names ("United Arab Emirates") and codes ("UAE").
         """
-        if not country:
+        if not country: 
             return "General International Contractor Agreement"
             
-        country = country.lower()
+        country = country.lower().strip()
         
-        # UAE Logic
-        if any(x in country for x in ["uae", "dubai", "united arab emirates", "abudhabi", "difc"]):
+        # 1. UAE Logic (Added 'united arab emirates' and 'emirates')
+        uae_keywords = ["uae", "dubai", "difc", "united arab emirates", "emirates", "abu dhabi"]
+        if any(x in country for x in uae_keywords):
             return "DIFC Employment Law (UAE)"
             
-        # UK Logic (Added 'united kingdom')
-        elif any(x in country for x in ["uk", "britain", "united kingdom", "england", "london"]):
+        # 2. UK Logic (Added 'united kingdom')
+        uk_keywords = ["uk", "britain", "london", "united kingdom", "england", "scotland"]
+        if any(x in country for x in uk_keywords):
             return "Employment Rights Act 1996 (UK)"
             
-        # Germany Logic
-        elif any(x in country for x in ["germany", "deutschland", "berlin", "munich"]):
+        # 3. Germany Logic (Added 'deutschland')
+        de_keywords = ["germany", "berlin", "deutschland", "munich", "frankfurt"]
+        if any(x in country for x in de_keywords):
             return "German Civil Code (BGB)"
             
-        else:
-            return "General International Contractor Agreement"
+        # Fallback
+        return "General International Contractor Agreement"
+
+    def answer_policy_question(self, question: str) -> str:
+        """
+        Phase 2: Conversational HR Assistant
+        """
+        try:
+            # Check if handbook exists
+            path = os.path.join("data", "handbook.txt")
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    policy_text = f.read()
+            else:
+                policy_text = "No handbook found."
+
+            # OPTIMIZED PROMPT
+            prompt = f"""
+            You are the Deriv HR AI. Answer the employee's question based strictly on the policy text below.
+            
+            RULES:
+            1. Be extremely concise. Maximum 2 sentences.
+            2. Go straight to the answer. Do not say "Based on the handbook..." or "Hello".
+            3. If the answer involves money, bold the amount (e.g., *$50*)."
+            
+            POLICY TEXT:
+            {policy_text}
+            
+            QUESTION: {question}
+            """
+
+            response = self.client.chat(
+                model=self.model,
+                messages=[{'role': 'user', 'content': prompt}],
+            )
+            return response.message.content
+
+        except Exception as e:
+            return f"Sorry, I couldn't process that. Error: {e}"

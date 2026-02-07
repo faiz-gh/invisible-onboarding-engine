@@ -17,7 +17,7 @@ class ComplianceEngine:
             "united kingdom": 45
         }
 
-        # 2. The Normalization Map (The Fix)
+        # 2. The Normalization Map
         # Maps common variations to a single Canonical Name (lowercase)
         self.country_aliases = {
             # UAE Variations
@@ -25,12 +25,14 @@ class ComplianceEngine:
             "dubai": "united arab emirates",
             "abudhabi": "united arab emirates",
             "u.a.e.": "united arab emirates",
+            "abu dhabi": "united arab emirates",
             
             # UK Variations
             "uk": "united kingdom",
             "britain": "united kingdom",
             "great britain": "united kingdom",
             "london": "united kingdom",
+            "england": "united kingdom",
             
             # Germany Variations
             "de": "germany",
@@ -85,7 +87,14 @@ class ComplianceEngine:
             # Use normalized key for lookup
             needed_days = self.visa_processing_times.get(location_norm, 30)
 
-            if days_until_start < needed_days:
+            # LOGIC FIX: Handle Past vs. Future Dates
+            if days_until_start < 0:
+                alerts.append({
+                    "type": "DATA_ERROR",
+                    "severity": "HIGH",
+                    "message": f"⚠️ Invalid Start Date: The date {candidate.start_date} is in the past. Please check the year."
+                })
+            elif days_until_start < needed_days:
                 sugg_date = (datetime.now() + timedelta(days=needed_days + 7)).strftime('%Y-%m-%d')
                 alerts.append({
                     "type": "COMPLIANCE_RISK",
