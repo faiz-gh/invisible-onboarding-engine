@@ -18,3 +18,6 @@ backend:
 
 frontend:
 	streamlit run frontend/app.py
+
+test:
+	pytest tests/ -v

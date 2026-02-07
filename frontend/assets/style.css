@@ -1,0 +1,122 @@
+/* Main Variables */
+:root {
+    --primary-color: #ff444f;
+    --secondary-color: #85acb0;
+    --background-color: #f7f7f7;
+    --text-color: #333333;
+    --card-bg: #ffffff;
+    --success-bg: #d4edda;
+    --success-text: #155724;
+    --error-bg: #f8d7da;
+    --error-text: #721c24;
+    --warning-bg: #fff3cd;
+    --warning-text: #856404;
+}
+
+/* Global Styles */
+.stApp {
+    background-color: var(--background-color);
+}
+
+h1, h2, h3 {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: var(--text-color);
+}
+
+/* Metric Cards */
+.metric-card {
+    background-color: var(--card-bg);
+    color: var(--text-color) !important;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 6px solid var(--primary-color);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.metric-card b {
+    color: #000;
+    font-weight: 600;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9em;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.status-badge.success {
+    background-color: var(--success-bg);
+    color: var(--success-text);
+}
+
+.status-badge.error {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+}
+
+.status-badge.warning {
+    background-color: var(--warning-bg);
+    color: var(--warning-text);
+}
+
+/* Action Area */
+.action-area {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+}
+
+/* Diff View Container */
+.diff-container {
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    height: 400px;
+    overflow-y: scroll;
+    border: 1px solid #dee2e6;
+}
+
+.diff-add {
+    background-color: #e6ffec;
+    color: #2da44e;
+    display: block;
+}
+
+.diff-del {
+    background-color: #ffebe9;
+    color: #cf222e;
+    text-decoration: line-through;
+    display: block;
+}
+
+.diff-normal {
+    color: #24292f;
+    display: block;
+}
+
+/* Custom Buttons Override */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.stButton > button:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
