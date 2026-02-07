@@ -52,6 +52,8 @@ Company disciplinary and grievance procedures apply and are available from HR. T
 ## 15. RESTRICTIVE COVENANTS
 Where applicable, your post-termination restrictions (such as non-solicitation or non-dealing) will be set out in a separate agreement and are intended to be no broader than necessary to protect legitimate business interests.
 
+{dynamic_clauses}
+
 ## 16. GOVERNING LAW
 This statement and your contract of employment are governed by the laws of England and Wales.
 

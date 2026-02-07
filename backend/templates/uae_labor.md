@@ -34,6 +34,8 @@ The Employer will process and store the Employee’s personal data in accordance
 ## 10. HEALTH, SAFETY AND CODE OF CONDUCT
 The Employee must comply with Employer health and safety policies, workplace conduct standards, and any applicable DIFC workplace regulations.
 
+{dynamic_clauses}
+
 ## 11. GOVERNING LAW
 This agreement is governed exclusively by the laws of the Dubai International Financial Centre (DIFC). Any dispute arising under or in connection with this contract shall be resolved under DIFC dispute resolution processes and courts as applicable.
 

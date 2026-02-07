@@ -39,6 +39,8 @@ Der Arbeitgeber verarbeitet personenbezogene Daten des Arbeitnehmers zur Durchf�
 ## 12. VERSICHERUNGEN UND LEISTUNGEN
 Zusätzliche Leistungen (z. B. bAV, Gesundheitsleistungen) sind in separaten Unternehmensrichtlinien geregelt.
 
+{dynamic_clauses}
+
 ## 13. GERICHTSSTAND UND ANWENDBARES RECHT
 Dieser Vertrag unterliegt dem Recht der Bundesrepublik Deutschland. Zuständig ist das sachlich zuständige Gericht am Sitz des Arbeitgebers.
 
